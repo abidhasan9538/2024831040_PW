@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
 
     // create window
     SDL_Window* window = SDL_CreateWindow(
-        "Circle using SDL",
+        "Circle",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         width,
