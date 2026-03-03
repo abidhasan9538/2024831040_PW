@@ -1,7 +1,7 @@
 # Project 150
-Name: Abid Hasan Utsha
-Reg: 2024831040
-Session: 2024-2025
+    Name: Abid Hasan Utsha. 
+    Reg: 2024831040. 
+    Session: 2024-2025. 
 
 
 
