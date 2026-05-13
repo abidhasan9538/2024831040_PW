@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/abidhasan/2024831040_pw/snakegame/main'
+relocations:     []
+...
