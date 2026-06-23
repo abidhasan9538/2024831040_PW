@@ -199,7 +199,7 @@ public:
         }
     }
 
-    void CheckCollisionWithWall()
+    /*void CheckCollisionWithWall()
     {
         if (snake.body[0].x < 0 || snake.body[0].x >= cellCount)
         {
@@ -210,7 +210,17 @@ public:
         {
             GameOver();
         }
+    }*/
+   void CheckCollisionWithWall()
+{
+    Vector2 head = snake.body[0];
+
+    if (head.x < 0 || head.x >= cellCount || head.y < 0 || head.y >= cellCount)
+    {
+        snake.body.pop_front();
+        GameOver();
     }
+}
 
     void CheckCollisionWithTail()
     {
