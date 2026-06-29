@@ -16,7 +16,7 @@ const Color gameOverColor   = {180, 96, 82, 255};   // muted terracotta
 const Color restartColor    = {170, 196, 170, 255}; // soft sage highlight
 const Color exitColor       = {196, 180, 140, 255};  // muted sand
 const Color boardShadow     = {18, 20, 18, 255};    // near-black green tint
-const Color borderColor2     = {0, 0, 0, 0}; 
+const Color transparentColor     = {0, 0, 0, 0}; 
 
 // ---------- Grid Settings ----------
 int cellSize = 25;
@@ -199,28 +199,18 @@ public:
         }
     }
 
-    /*void CheckCollisionWithWall()
+    void CheckCollisionWithWall()
     {
-        if (snake.body[0].x < 0 || snake.body[0].x >= cellCount)
+        Vector2 head = snake.body[0];
+
+        if (head.x < 0 || head.x >= cellCount || head.y < 0 || head.y >= cellCount)
         {
+            // Remove the head that just moved off the grid so the snake
+            // never gets drawn outside the board on the Game Over screen.
+            snake.body.pop_front();
             GameOver();
         }
-
-        if (snake.body[0].y < 0 || snake.body[0].y >= cellCount)
-        {
-            GameOver();
-        }
-    }*/
-   void CheckCollisionWithWall()
-{
-    Vector2 head = snake.body[0];
-
-    if (head.x < 0 || head.x >= cellCount || head.y < 0 || head.y >= cellCount)
-    {
-        snake.body.pop_front();
-        GameOver();
     }
-}
 
     void CheckCollisionWithTail()
     {
@@ -301,6 +291,14 @@ int main()
     SetTargetFPS(60);
     SetExitKey(KEY_NULL);
 
+    // Off-screen target we render the game world into, so we can blur
+    // just that texture on Game Over without touching the popup colors.
+    RenderTexture2D target = LoadRenderTexture(screenWidth, screenHeight);
+    Shader blurShader = LoadShader(0, "shaders/blur.fs");
+    int resolutionLoc = GetShaderLocation(blurShader, "resolution");
+    float resolution[2] = { (float)screenWidth, (float)screenHeight };
+    SetShaderValue(blurShader, resolutionLoc, resolution, SHADER_UNIFORM_VEC2);
+
     Game game;
     bool exitRequested = false;
 
@@ -343,40 +341,61 @@ int main()
             }
         }
 
+        // ---- Pass 1: draw the game world into the off-screen texture ----
+        BeginTextureMode(target);
+            ClearBackground(backgroundColor);
+
+            DrawRectangle(
+                offset - 5,
+                offset - 5,
+                cellSize * cellCount + 10,
+                cellSize * cellCount + 10,
+                boardShadow
+            );
+
+            DrawRectangleLinesEx(
+                Rectangle{
+                    (float)offset - 5,
+                    (float)offset - 5,
+                    (float)cellSize * cellCount + 10,
+                    (float)cellSize * cellCount + 10
+                },
+                5,
+                borderColor
+            );
+
+            game.Draw();
+
+            DrawText("SNAKE", offset + 180, 15, 35, textColor);
+            DrawText(TextFormat("%i", game.score), offset - 5, offset + cellSize * cellCount + 10, 30, textColor);
+        EndTextureMode();
+
+        // ---- Pass 2: draw that texture to the screen (blurred only on Game Over) ----
         BeginDrawing();
         ClearBackground(backgroundColor);
 
-        DrawRectangle(
-            offset - 5,
-            offset - 5,
-            cellSize * cellCount + 10,
-            cellSize * cellCount + 10,
-            boardShadow
-        );
-
-        DrawRectangleLinesEx(
-            Rectangle{
-                (float)offset - 5,
-                (float)offset - 5,
-                (float)cellSize * cellCount + 10,
-                (float)cellSize * cellCount + 10
-            },
-            5,
-            borderColor
-        );
-
-        game.Draw();
-
-        DrawText("SNAKE", offset + 180, 15, 35, textColor);
-        DrawText(TextFormat("%i", game.score), offset - 5, offset + cellSize * cellCount + 10, 30, textColor);
+        // RenderTexture content is vertically flipped, so flip it back with a negative height
+        Rectangle sourceRec = { 0, 0, (float)target.texture.width, -(float)target.texture.height };
 
         if (game.state == GAME_OVER)
         {
+            BeginShaderMode(blurShader);
+                DrawTextureRec(target.texture, sourceRec, Vector2{ 0, 0 }, WHITE);
+            EndShaderMode();
+
+            // Drawn AFTER EndShaderMode, so the popup's own colors are never touched by the blur
             game.DrawGameOverPopup();
+        }
+        else
+        {
+            DrawTextureRec(target.texture, sourceRec, Vector2{ 0, 0 }, WHITE);
         }
 
         EndDrawing();
     }
+
+    UnloadShader(blurShader);
+    UnloadRenderTexture(target);
 
     CloseWindow();
     return 0;
